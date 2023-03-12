@@ -2,27 +2,27 @@ import controlP5.*; //import ControlP5 library
 import processing.serial.*;
 Serial port;
 
-String[] portList, controlText={"Scan Distance","Scan Color"},controlLabel={"U","L","R","D"},controlPacket={"p|1|1","p|0|0","p|0|1","p|1|0"};
-String[] lines=new String[55],settingText={"Motor X Axis IN0","Motor X Axis IN1","Motor X Axis IN2","Motor X Axis IN3","Motor Y Axis IN0","Motor Y Axis IN1","Motor Y Axis IN2","Motor Y Axis IN3","LED","S0","S1","S2","S3","OUT","Ultrasonic","Black Red","Black Green","Black Blue","White Red","White Green","White Blue","Color Scale"};//this contains all the settings
+String[] portList, controlText={"Scan Distance","Scan Color"},controlLabel={"U","L","R","D"},controlPacket={"p|1|0","p|0|0","p|0|1","p|1|1|1"};
+String[] lines,settingText={"Motor X Axis IN0","Motor X Axis IN1","Motor X Axis IN2","Motor X Axis IN3","Motor Y Axis IN0","Motor Y Axis IN1","Motor Y Axis IN2","Motor Y Axis IN3","LED","S0","S1","S2","S3","OUT","Ultrasonic","Black Red","Black Green","Black Blue","White Red","White Green","White Blue","Color Scale"};//this contains all the settings
 String path = "setting.txt";//leads the program to that file
 String[][] prodData = new String[200][4];
 String[][] atbDisplay = {{"Max:","Start:","Freq:","Height:"},{"Start:","Height:","Any:","Any:"},{"Start:","Freq:","Short:","Tall:"},{"Start:","Short:","Tall:","Any:"},{"Freq:","Red:","Green:","Blue:"}};
 
 ControlP5 cp5; //create ControlP5 object
 PFont font;
-PImage decor;
+PImage img;
 PFont tech,heading;
 
 Textlabel connectLabel,connectLabel2,sL1,sL2,sL3,sL4,sL5,sL6,sL7,sL8,sL9,sL10,eL1,eL2,eL3,eL4,eL5,eL6,eL7;
 Textlabel[] tg = new Textlabel[10], settingLabel = new Textlabel[22];
 Button b1,b2,b3,b4,b5,b6,b7,b8;
-Button[] bg = new Button[20],arrow = new Button[4],control = new Button[3];
+Button[] bg = new Button[20],arrow = new Button[4],control = new Button[2];
 Textfield tf1,tf2,tf3,tf4,tf5,tf6,tf7;
 Textfield[] settings = new Textfield[22];
 int[][] controlOffset = {{75,0},{0,75},{135,75},{75,130}}, controlSize={{60,70},{75,50},{75,50},{60,70}};
 int[] settingSz = {8,6,7},readSepArray = new int[250];//for storing shenanigans out of readSep()
 int margin=20,padding=25,xs=15,ys=15,mode=0,set4,page=0,toEdit=-1;//mode = state of the 2nd area
-int numport=0,baud=9600,numprod=0,state=0,counted=0,countError=0;
+int numport=0,baud=9600,numprod=0,state=0;
 
 Textlabel qTextLabel(String n,String f,int sz){
    return cp5.addTextlabel(n).setFont(createFont(f,sz));
@@ -64,28 +64,9 @@ boolean isNumeric(String str){
   return str != null && str.matches("[0-9.]+");
 }
 int[] set1=new int[8],set2=new int[7],set3=new int[7];
-void save(){//saves whatever you're doing into a file
-  int nlines = 4+set4;
-  //clear out the lines
-  String [] saveLine = new String[55];
-  //fill out the static lines
-  for(int i=0;i<nlines;i++){saveLine[i]="";}
-  for(int i=0;i<7;i++){saveLine[0]=saveLine[0]+Integer.toString(set1[i])+"|";}saveLine[0]=saveLine[0]+Integer.toString(set1[7]);
-  for(int i=0;i<6;i++){saveLine[1]=saveLine[1]+Integer.toString(set2[i])+"|";}saveLine[1]=saveLine[1]+Integer.toString(set2[6]);
-  for(int i=0;i<6;i++){saveLine[2]=saveLine[2]+Integer.toString(set3[i])+"|";}saveLine[2]=saveLine[2]+Integer.toString(set3[6]);
-  saveLine[3]=Integer.toString(set4);
-  //then do the variable lines
-  for(int i=4;i<nlines;i++){
-    saveLine[i]=String.format("%s|%s|%s|%s",prodData[i-4][0],prodData[i-4][1],prodData[i-4][2],prodData[i-4][3]);
-  }
-  saveStrings(path,saveLine);
-}
 void setup(){
-  decor = loadImage("geopadoru.png");
-  decor.resize(125,104);
   //file IO + setting on the computer, ready to be imported over to the machine
   lines = loadStrings(path);
-  
   set1=int(split(lines[0],'|'));set2=int(split(lines[1],'|'));set3=int(split(lines[2],'|'));//sMX=sMY,colUltPin,BWScale
   set4=int(lines[3]);
   println("Total Products : "+Integer.toString(set4));
@@ -123,7 +104,6 @@ void setup(){
   b1=fButton("command1","Count Products",850-padding-margin-195,margin+padding+25,200,50);
   b2=fButton("command2","Pause",850-padding-margin-195,margin+padding+80,95,50);
   b3=fButton("command3","Continue",850-padding-margin-90,margin+padding+80,95,50);
-  control[2]=fButton("control7","Mapped Color",xS,margin+padding+190,150,25);
   for(int i=0;i<2;i++){control[i]=fButton("control"+Integer.toString(i),controlText[i],xS,margin+padding+130+(30*i),150,25);}
   for(int i=0;i<4;i++){arrow[i]=fButton("control"+Integer.toString(i+3),controlLabel[i],850-padding-margin-195+controlOffset[i][0],margin+padding+190+controlOffset[i][1],controlSize[i][0],controlSize[i][1]);}
   //!right side - products table
@@ -175,7 +155,6 @@ int mapRange(int n,int x1,int x2,int y1,int y2){
 }
 void draw(){
   //productDrop.draw(this);
-  image(decor, 725, 425);
   background(255,255,255);
   String r = cp5.get(Textfield.class,"form3").getText();
   if(isNumeric(r)){
@@ -185,6 +164,9 @@ void draw(){
     }
   }
   //button event
+  for(int i=0;i<4;i++){
+    if(port!=null && arrow[i].isPressed()){port.write(controlPacket[i]);println(controlPacket[i]);}
+  }
   //port event
   while (port!=null && port.available() > 0) {
     String inStr = port.readString();
@@ -194,30 +176,13 @@ void draw(){
       inStr=inStr.substring(2);
       String[] splitStr=split(inStr,"|");
       printArray(splitStr);
-      sL2.setText(String.format("Color : R = %d = %d",int(splitStr[0]),mapRange(int(splitStr[0]),set3[3],set3[0],255,0)));
-      sL3.setText(String.format("        G = %d = %d",int(splitStr[1]),mapRange(int(splitStr[1]),set3[4],set3[1],255,0)));
-      sL4.setText(String.format("        B = %d = %d",int(splitStr[2]),mapRange(int(splitStr[2]),set3[5],set3[2],255,0)));
+      sL2.setText(String.format("Color : R = %d = %d",int(splitStr[0]),mapRange(int(splitStr[0]),set3[3],set3[0],0,255)));
+      sL3.setText(String.format("        G = %d = %d",int(splitStr[1]),mapRange(int(splitStr[1]),set3[4],set3[1],0,255)));
+      sL4.setText(String.format("        B = %d = %d",int(splitStr[2]),mapRange(int(splitStr[2]),set3[5],set3[2],0,255)));
     }else if(inType=='G'){
       inStr=inStr.substring(2);
       sL1.setText("Ultrasonic : "+int(inStr)+" = "+(int(inStr)/100)+"cm.");
-    }else if(inType=='Q'){
-      counted++;
-      sL6.setText("Counted : "+Integer.toString(counted));
-    }else if(inType=='R'){
-      countError++;
-      sL7.setText("Errored : "+Integer.toString(countError));
-    }else if(inType=='S'){//counting is finished
-      //update ALL prodData
-      for(int i=0;port!=null && i<set4;i++){
-        port.write("s|"+Integer.toString(i));
-        while(port!=null && port.available()==0){delay(50);}
-        String innerStr = port.readString();println(innerStr);
-        prodData[i][1]=innerStr.substring(2);
-        delay(150); 
-      }
-      connectLabel.setText("Status : Ready");
     }
-    port.clear();
   }
 }
 //void select_prod(int n){
@@ -230,7 +195,7 @@ void mode1(){
   b1.show();b2.show();b3.show();
   b4.hide();b5.hide();sL8.hide();sL9.hide();sL10.hide();b6.hide();eL1.hide();eL2.hide();eL3.hide();eL4.hide();eL5.hide();eL6.hide();eL7.hide();
   tf1.hide();tf2.hide();tf3.hide();tf4.hide();tf5.hide();tf6.hide();tf7.hide();
-  for(int i=0;i<3;i++){control[i].show();}
+  for(int i=0;i<2;i++){control[i].show();}
   for(int i=0;i<4;i++){arrow[i].show();}
   for(int i=0;i<10;i++){bg[i].hide();tg[i].hide();}
   for(int i=0;i<22;i++){settings[i].hide();settingLabel[i].hide();}
@@ -242,11 +207,9 @@ void mode2(){
   b1.hide();b2.hide();b3.hide();
   b4.show();b5.show();sL8.show();sL9.show();sL10.show();b6.show();eL1.show();eL2.show();eL3.show();eL4.show();eL5.show();eL6.show();eL7.show();
   tf1.show();tf2.show();tf3.show();tf4.show();tf5.show();tf6.show();tf7.show();
-  for(int i=0;i<3;i++){control[i].hide();}
+  for(int i=0;i<2;i++){control[i].hide();}
   for(int i=0;i<4;i++){arrow[i].hide();}
-  for(int i=0;i<10;i++){
-    bg[i].show();tg[i].show();//show
-  }
+  for(int i=0;i<10;i++){bg[i].show();tg[i].show();}
   for(int i=0;i<22;i++){settings[i].hide();settingLabel[i].hide();}
   b7.hide();b8.hide();
 }
@@ -256,7 +219,7 @@ void mode3(){
   b1.hide();b2.hide();b3.hide();
   b4.hide();b5.hide();sL8.hide();sL9.hide();sL10.hide();b6.hide();eL1.hide();eL2.hide();eL3.hide();eL4.hide();eL5.hide();eL6.hide();eL7.hide();
   tf1.hide();tf2.hide();tf3.hide();tf4.hide();tf5.hide();tf6.hide();tf7.hide();
-  for(int i=0;i<3;i++){control[i].hide();}
+  for(int i=0;i<2;i++){control[i].hide();}
   for(int i=0;i<4;i++){arrow[i].hide();}
   for(int i=0;i<10;i++){bg[i].hide();tg[i].hide();}
   for(int i=0;i<22;i++){settings[i].show();settingLabel[i].show();}
@@ -292,74 +255,11 @@ void button9(){transcribeEditData(10*page + 6);}
 void button10(){transcribeEditData(10*page + 7);}
 void button11(){transcribeEditData(10*page + 8);}
 void button12(){transcribeEditData(10*page + 9);}
-void button13(){
-  String[] TBS = new String[2];
-  String settingStr=String.format("%dA%dB%dC%dD%d",int(tf3.getText()),int(tf4.getText()),int(tf5.getText()),int(tf6.getText()),int(tf7.getText()));
-  TBS[0]=String.format("A|%d|%d|%d|%d",toEdit,int(tf1.getText()),int(tf2.getText()),int(tf3.getText()));
-  TBS[1]="B|"+Integer.toString(toEdit)+"|"+settingStr;
-  prodData[toEdit][0]=tf1.getText();prodData[toEdit][1]="0";prodData[toEdit][2]=tf2.getText();prodData[toEdit][3]=settingStr;
-  for(int i=0;port!=null && i<2;i++){port.write(TBS[i]);delay(250);}
-  if(set4==toEdit){
-    set4++;
-  }
-  if((toEdit-(10*page))>=0 && 9>=(toEdit-(10*page))){tg[toEdit-(10*page)].setText(getTableStr(toEdit-(10*page)));}
-  save();
-}
-void button14(){
-  String[] temp = new String[25];
-  String inStr;
-  port.write("n");
-  while(port!=null && port.available()==0){delay(50);}
-  inStr=port.readString();
-  temp=split(inStr,'|');
-  //set the value of that pins
-  //0-7 = motor, 8/9/10/11/12/13=color, 14=ult, 15/16/17/18/19/20/21 
-  for(int i=0;i<8;i++){
-    settings[i].setText(temp[i]);
-  }
-  settings[8].setText(temp[14]);
-  for(int i=0;i<6;i++){
-    settings[9+i].setText(temp[8+i]); 
-  }
-  port.write("o|0");
-  while(port!=null && port.available()==0){delay(50);}
-  inStr=port.readString();
-  temp=split(inStr,'|');
-  for(int i=0;i<3;i++){}
-  //set the value of them colors
-  port.write("o|1");
-  while(port!=null && port.available()==0){delay(50);}
-  inStr=port.readString();
-  temp=split(inStr,'|');
-  for(int i=0;i<3;i++){}
-}
-void button15(){
-  String[] TBS = new String[5];
-  TBS[0]=String.format("f|%d|%d|%d|%d|%d|%d|%d",set2[6],set2[0],set2[1],set2[2],set2[3],set2[4],set2[5]);
-  TBS[1]=String.format("g|%d|%d|%d|%d|%d",0,set1[4],set1[5],set1[6],set1[7]);
-  TBS[2]=String.format("g|%d|%d|%d|%d|%d",1,set1[0],set1[1],set1[2],set1[3]);
-  TBS[3]=String.format("h|%d|%d|%d",set3[0],set3[1],set3[2]);
-  TBS[4]=String.format("i|%d|%d|%d",set3[3],set3[4],set3[5]);
-  printArray(TBS);
-  for(int i=0;port!=null && i<5;i++){port.write(TBS[i]);delay(300);}
-  save(); 
-}
 void button1(){if(page>0){page--;}updatePages();}
 void button2(){if(page<4){page++;}updatePages();}
 void control0(){if(port!=null){port.write("l");}}
 void control1(){if(port!=null){port.write("k|0");}}
-void control7(){if(port!=null){port.write("k|1");}}
-void control3(){if(port!=null){port.write(controlPacket[0]);}}
-void control4(){if(port!=null){port.write(controlPacket[1]);}}
-void control5(){if(port!=null){port.write(controlPacket[2]);}}
-void control6(){if(port!=null){port.write(controlPacket[3]);}}
-void command1(){
-  if(port!=null){port.write("a");connectLabel.setText("Status : Counting");}
-  counted=0;
-  countError=0;
-}
-void command2(){if(port!=null){port.write("P");}}
-void command3(){if(port!=null){port.write("ZZZ");}}//Z=dummy packet that just gets read, strictly
+void command1(){if(port!=null){port.write("a");}}
 void select_port(int n) {
   numport=n;
   try{
@@ -379,25 +279,8 @@ void select_port(int n) {
     println("Connected to portName: " + portList[numport]);
     println("myPort = " + port);
     connectLabel2.setText("INT : " + port);
-    connectLabel.setText("Status : Setting up...");
-    //once connected, send the settings over as in setting them up
-    delay(3500);
-    for(int i=0;i<set4;i++){
-      toEdit=i;
-      port.write(String.format("A|%d|%s|%s|%s",i,prodData[i][0],prodData[i][2],"0"));//port the product information
-      println(String.format("A|%d|%s|%s|%s",i,prodData[i][0],prodData[i][2],"0"));
-      delay(325);
-      port.write("B|"+Integer.toString(i)+"|"+prodData[i][3]);
-      println("B|"+Integer.toString(i)+"|"+prodData[i][3]);
-      delay(350);
-    }
-    //button15();//port the settings over
     connectLabel.setText("Status : Ready");
-    delay(250);
-    //port.write("e");
-    delay(150);
-    println("Verification");
-    for(int i=0;i<set4;i++){port.write("b|"+Integer.toString(i));delay(200);}
+    delay(1000);
 
   }
   catch(Exception e){
