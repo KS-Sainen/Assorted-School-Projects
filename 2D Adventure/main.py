@@ -1,9 +1,14 @@
 import sys, pygame, random
 import pygame.gfxdraw
+import time
 random.seed()
 pygame.init()
 size = width, height = 896, 512
 floor = 512-96 #constant to stop gravity
+
+#2D Adventure from PyGame - requires pygame library
+#This program is meant to be run from Thonny 3.3.13 or above, or Python 3.7.9 or above if the current system path from system libray is the folder where this program is contained
+#Please put the assets folder into the same place where this program
 
 screen = pygame.display.set_mode(size)
 title = pygame.display.set_caption("2D Adventure")
@@ -62,20 +67,22 @@ fontverysmol = pygame.font.Font("assets/font/rainyhearts.ttf",20)
 font1 = pygame.font.Font("assets/font/rainyhearts.ttf",50)
 gameover = font1.render("Game Over!",True,(255,255,255))
 padding = 30
-#stuff
+#Quick Color tuples
 red = (255,0,0)
 yellow = (255,255,0)
 green = (0,255,0)
 white = (255,255,255)
 black = (0,0,0)
 
-#character
-scale = 0.3
-playerOffset = (0,64)
+#General Variables
+scale = 0.3 # scale of the player
+playerOffset = (0,64) #player position
 combo = 0
 score = 0
 killcount = 0
 scoretextscale = 1 #the bigger it is, the more hyped up it gets
+
+#Main Character
 class character:
     animation_name = {0:"idle",1:"run",2:"jump",3:"attack",4:"dead"}
     def __init__(self):
@@ -87,7 +94,7 @@ class character:
         self.clock = 0
         self.frame = 0
         self.combodef = 0#combo protection %
-        self.money = 0#dosh
+        self.money = 0#mony
         self.pos = (padding,floor)#reference to top left corner
         print(font.size("{}/{}".format(self.health,self.maxhealth)))
         #get all his sprites in
@@ -104,7 +111,7 @@ class character:
             self.dead.append(pygame.transform.smoothscale(pygame.Surface.convert_alpha(pygame.image.load("assets/sprite/character/ninja/dead/Dead__00{}.png".format(i))),(578*(500*scale/599),500*scale)))
             self.jump.append(pygame.transform.smoothscale(pygame.Surface.convert_alpha(pygame.image.load("assets/sprite/character/ninja/jump/Jump__00{}.png".format(i))),(290*scale,500*scale)))
             self.attack.append(pygame.transform.smoothscale(pygame.Surface.convert_alpha(pygame.image.load("assets/sprite/character/ninja/attack/Attack__00{}.png".format(i))),(524*(500*scale/565),500*scale)))
-        self.hitbox = self.idle[0].get_rect()#a better way of doing hitboxes lol
+        self.hitbox = self.idle[0].get_rect()#a better way of doing hitboxes
     def getLifeText(self):
         return fontsmol.render("{:.1f}/{:.0f}".format(self.health,self.maxhealth),True,(255,0,0))
     def renderScoreText(self):
@@ -132,14 +139,15 @@ class character:
         #combo
         screen.blit(font.render(comboStr,True,yellow),(width-padding-(font.size(comboStr)[0]),padding+32))
     def animate(self):
+        #position -> location
         (pW,pH)=self.pos
         pH -= 707*scale
         pH += playerOffset[1]
         pW += playerOffset[0]
-        if self.state == 0:
+        if self.state == 0:#idle
             self.hitbox = self.idle[self.frame].get_rect(topleft=(pW,pH))
             screen.blit(self.idle[self.frame],(pW,pH))
-        elif self.state == 1:
+        elif self.state == 1:#moving
             pH+=5
             if left_key:
                 self.walk[self.frame] = pygame.transform.flip(self.walk[self.frame],True,False)
@@ -147,20 +155,21 @@ class character:
             screen.blit(self.walk[self.frame],(pW,pH))
             if left_key:
                 self.walk[self.frame] = pygame.transform.flip(self.walk[self.frame],True,False)
-        elif self.state == 2:
+        elif self.state == 2:#jumping
             pH+=5
             self.frame = min(self.frame,9)
             self.hitbox = self.jump[self.frame].get_rect(topleft=(pW,pH))
             screen.blit(self.jump[self.frame],(pW,pH))
-        elif self.state == 3:
+        elif self.state == 3:#attack
             pH+=15
             self.frame = min(self.frame,9)
             self.hitbox = self.attack[self.frame].get_rect(topleft=(pW,pH))
             screen.blit(self.attack[self.frame],(pW,pH))
-        elif self.state == 4:
+        elif self.state == 4:#death
             pH+=15
             self.frame = min(self.frame,9)
             screen.blit(self.dead[self.frame],(pW,pH))
+        #used for animation, frame = what frame of animation to use
         self.clock += 1
         if(self.clock%6 == 0):
             self.frame += 1
@@ -171,8 +180,10 @@ class character:
             self.clock=0
             self.state=s
     def move(self,dX,dY):
+        #the usage of max and min is for setting limits on where the player can go
         self.pos = (max(-15,min(width-(587*scale)+25,self.pos[0]+dX)),min(max(707*scale-30,self.pos[1]+dY),floor))
     def onAttack(self):
+        #resets combo + reduce health
         global combo
         self.health -= 1*self.dr
         if(self.health <= 0):
@@ -181,6 +192,7 @@ class character:
         if(random.uniform(0,1) > self.combodef):combo = 0
     def heal(self,h):
         self.health += h
+#Enemies
 class Skeleton:
     def __init__(self):
         self.health = 1
@@ -207,27 +219,27 @@ class Skeleton:
         pH += self.offset[1]
         pW += self.offset[0]
         sW = 224*self.scale#surface width, useful
-        if self.state == 0:
+        if self.state == 0:#idle state
             self.hitbox = sIdle[self.frame].get_rect(topleft=(pW+10,pH))
             screen.blit(sIdle[self.frame],(pW,pH))
             if(self.clock%6 == 0):
                 self.frame += 1
                 self.frame %= 12
-        elif self.state == 1:
+        elif self.state == 1:#moving right
             self.move(self.speed,0)
             self.hitbox = sRun[self.frame].get_rect(topleft=(pW+10,pH))
             screen.blit(pygame.transform.flip(sRun[self.frame],True,False),(pW,pH))
             if(self.clock%6 == 0):
                 self.frame += 1
                 self.frame %= 8
-        elif self.state == 2:
+        elif self.state == 2:#moving left
             self.move(-1*self.speed,0)
             self.hitbox = sRun[self.frame].get_rect(topleft=(pW+10,pH))
             screen.blit(sRun[self.frame],(pW,pH))
             if(self.clock%6 == 0):
                 self.frame += 1
                 self.frame %= 8
-        elif self.state == 3:
+        elif self.state == 3:#attacking
             self.hitbox = sAttack[self.frame].get_rect(topleft=(pW+10,pH))
             screen.blit(sAttack[self.frame],(pW,pH))
             if(self.clock%self.atkspeed == 0):
@@ -247,7 +259,7 @@ class Skeleton:
                     self.changeState(0)
         if self.state!=4:#put other global stuffs here I guess
             #screen.blit(fontsmol.render(str(round(self.health,0)),True,(255,255,255)),(pW,pH-30))
-            #goofy ahhh surfaces
+            #surfaces
             height=22
             surface = pygame.Surface((sW-30,height))
             surface.set_colorkey(white)
@@ -278,15 +290,20 @@ class Skeleton:
         global score,combo,killcount,scoretextscale
         if(scoretextscale>=1.2):scoretextscale=1.25
         else:scoretextscale+=0.02
+        #death
         if(self.health<=0):
+            #add score, more combo = more score
             score += 250*int(1+(self.diff/5)) + int(50*(combo**self.scoreScale)) + 10*killcount + 500*bglevel
+            #add money, harder enemy = more money
             knight.money += int(7*((1+bglevel)**2) + random.uniform(0,combo**self.moneyscale) + random.uniform(0,self.diff**self.moneyscale))
             combo += 1
+            #reroll difficulty
             self.diff = int(((combo**1.1)+1+15*bglevel+(score//25000))*random.uniform(0.9,1.1))
             self.clock = 0
             self.frame = 0
             self.state = 0
             scoretextscale += 0.1
+            #recalculate attribute according to difficulty
             self.atkspeed = max(24-int(self.diff/10),3)#max speed : 210 difficulty
             self.health = 1+(self.diff**self.healthScale)
             self.maxhealth = self.health
@@ -294,14 +311,16 @@ class Skeleton:
             self.hitbox = pygame.Rect(-1,-1,-1,-1)
             self.changeState(4)
             killcount += 1
-            if killcount%30 == 0:knight.heal(1)
+            if killcount%30 == 0:knight.heal(1)#healing
         else:
+            #hit scoring
             score += 15 + int(5*(combo**1.05))
     def move(self,dX,dY):
         (x,y) = self.pos
         self.pos = (x+dX,y+dY)
 knight = character()
 #enemy = Skeleton()
+#enemies array, can be added more as the game goes on
 enemies = []
 enemies.append(Skeleton())
 #enemies.append(Skeleton())
@@ -310,6 +329,7 @@ left_key = False
 right_key = False
 jump_key = False
 while running:
+    #adding new enemies + change background
     if(score >= 100000):
         bglevel = 2
         if len(enemies)==1:
@@ -325,8 +345,9 @@ while running:
             enemies[1].speedScale = 0.075
             enemies[1].moneyscale += 0.02
     elif(score >= 10000):bglevel = 1
+    #draw background
     screen.blit(background[bglevel],(0,0))
-    #update position
+    #update position -> (dx, dy)
     if(left_key and knight.state!=4):
         knight.move(-5,0)
     if(right_key and knight.state!=4):
@@ -337,12 +358,13 @@ while running:
         knight.move(0,5)
     #enemy update loop
     for enemy in enemies:
+        #collison
         if(enemy.state!=4 and knight.state!=4 and random.random()<0.9):
             if(knight.hitbox.colliderect(enemy.hitbox)):
                 if(enemy.state!=3):
                     enemy.changeState(3)
                 elif(enemy.frame==7):
-                    knight.onAttack()
+                    knight.onAttack()#attack the main character
                     enemy.changeState(0)
             elif(knight.pos[0] > enemy.pos[0] and enemy.state!=1 and enemy.clock>=10):#move towards the player
                 enemy.changeState(1)
@@ -355,30 +377,36 @@ while running:
         screen.blit(ground[1],(i*128,floor))
     if(knight.state == 4):
         screen.blit(gameover,(330,10))
+    #objects on the ground
     screen.blit(objects[1],(355,floor-93))
     screen.blit(objects[8],(712,floor-76))
     screen.blit(objects[6],(765,floor-64))
     screen.blit(objects[8],(865,floor-76))
     screen.blit(objects[7],(658,floor-55))
     screen.blit(objects[4],(-150,floor-239))
+    #stats
     screen.blit(heart,(padding,padding))
     screen.blit(coin,(padding,32+padding))
     screen.blit(sword[swordLevel],(padding+128,padding+32))
     screen.blit(armor[armorLevel],(padding+128,padding))
     screen.blit(skull[min(3,killcount//75)],(padding,64+padding))
     screen.blit(font.render(str(round(clock.get_fps(),1)),True,white),(0,480))
+    if killcount < 5:
+        screen.blit(font.render("Use F, G, H, or J to attack",True,white),(0,480-32))
+        screen.blit(font.render("Use A, D, and Spacebar to move around",True,white),(0,480-64))
     screen.blit(knight.getLifeText(),(padding+32,padding))
     screen.blit(fontsmol.render("{}".format(knight.money),True,white),(padding+32,padding+32))
     screen.blit(font.render("{:.1f}".format(knight.str),True,white),(padding+180,padding+32))
-    if swordLevel<5:screen.blit(fontsmol.render("({})".format(swordCost[swordLevel]),True,yellow),(padding+240,padding+32))
-    if armorLevel<5:screen.blit(fontsmol.render("({})".format(armorCost[armorLevel]),True,yellow),(padding+240,padding))
+    if swordLevel<5:screen.blit(fontsmol.render("({}) [1]".format(swordCost[swordLevel]),True,yellow),(padding+240,padding+32))
+    if armorLevel<5:screen.blit(fontsmol.render("({}) [2]".format(armorCost[armorLevel]),True,yellow),(padding+240,padding))
     screen.blit(font.render("{:.1f}".format(knight.dr),True,white),(padding+180,padding))
     screen.blit(font.render("{}".format(killcount),True,white),(padding+32,padding+64))
+    #animate characters
     for enemy in enemies:
         enemy.animate()
     knight.renderScoreText()
     knight.animate()
-    #gems
+    #gems - achievement
     gemCount=0
     if(swordLevel==5 and armorLevel==5):gemCount+=1
     if(score>=scoreR[2]):gemCount+=3
@@ -394,6 +422,7 @@ while running:
         if i<=4:screen.blit(gems[i],(width-padding-(32*(5-i)-10),padding+75))#row 0
         else:screen.blit(gems[i],(width-padding-(32*(10-i)-10),padding+107))#row 1
     pygame.display.update()
+    #controls
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -413,10 +442,12 @@ while running:
                 right_key=True
                 knight.changeState(1)
                 print("right")
+            #attack
             elif event.key == pygame.K_f or event.key==pygame.K_j or event.key==pygame.K_g or event.key==pygame.K_h:
                 knight.changeState(3)
                 for enemy in enemies:
                     if knight.hitbox.colliderect(enemy.hitbox):enemy.onAttack()
+            #buying items
             elif event.key == pygame.K_1 and swordLevel<5:
                 if(knight.money >= swordCost[min(4,swordLevel)]):
                     swordLevel += 1
@@ -430,6 +461,9 @@ while running:
                     knight.dr -= 0.1
                     knight.combodef += 0.05
                     knight.money -= armorCost[armorLevel-1]
+            elif event.key == pygame.K_z:
+                #special pause key
+                time.sleep(10)
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_SPACE:
                 knight.changeState(0)
@@ -443,3 +477,4 @@ while running:
             elif event.key == pygame.K_f or event.key==pygame.K_j or event.key==pygame.K_g or event.key==pygame.K_h:
                 knight.changeState(0)
     clock.tick(60)
+
