@@ -48,7 +48,7 @@ String changeAble[3] = {"ID      ","MaxCount","Pin     "};
 
 
 //utlity functions
-//just use isDigit(c)
+//not used anyemore, just use isDigit(c)
 int check_digit (char c) {
     return (c>='0') && (c<='9');
 }
@@ -101,14 +101,14 @@ void readSeparator(String s,int* p,int type,int sz){
     }
   }
 }
-//takes an integer and output the LED by "0000" per bit, the nth bit is the nth item in array
+//takes an number and outputs to the pin according to the base 2 digit, the nth bit is the nth item in such number
 //Input : int:state, pointer to int:arr, int size of arr
 void setPin(int state,int* arr,int s){
   for(int i=0;i<s;i++){
     digitalWrite(*(arr+i),(state>>i)&1);
   }
 }
-//takes an integer array and pinMode it to the integer m
+//the same as setPin, but with using INPUT/OUTPUT mode
 //0 = OUTPUT, 1=INPUT
 void modePin(int* arr,int m,int sz){
   for(int i=0;i<sz;i++){
@@ -346,7 +346,7 @@ void serialEvent() {
 void loop() {
   int tlr=readKeypad();
   inputString="";
-  //read the string because read function gay
+  //read the string
   while(bluetooth.available()){
       inputString += (char)bluetooth.read();
   }
